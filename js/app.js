@@ -7,34 +7,82 @@ const blogsContainer = document.getElementById('blogs-container');
 const editorContainer = document.getElementById('editor-container');
 const loginForm = document.getElementById('login-form');
 const addBlogBtn = document.getElementById('add-blog-btn');
+const navbar = document.getElementById('navbar');
+const welcomeBanner = document.getElementById('welcome-banner');
 
-// Login Functionality
+// ===============================
+// Navbar: dynamic based on login
+// ===============================
+if (navbar) {
+    if (isLoggedIn) {
+        navbar.innerHTML = `
+            <a href="index.html">Home</a>
+            <a href="editor.html">Editor</a>
+            <a href="#" id="logout-link">Logout</a>
+            <button id="dark-mode-toggle">Dark Mode</button>
+        `;
+    } else {
+        navbar.innerHTML = `
+            <a href="index.html">Home</a>
+            <a href="login.html" id="login-link">Login</a>
+            <button id="dark-mode-toggle">Dark Mode</button>
+        `;
+    }
+}
+
+// ===============================
+// Login + Signup Functionality
+// ===============================
 if (loginForm) {
+    const signupBtn = document.getElementById('signup-btn');
+    
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 
-        if (username === 'admin' && password === 'password') {
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const user = users.find(u => u.username === username && u.password === password);
+        if (user) {
             localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('currentUser', username);
             window.location.href = 'editor.html';
         } else {
-            alert('Invalid credentials');
+            alert('Invalid credentials. Please try again or sign up.');
         }
     });
-}
 
-// Logout Functionality
-const logoutLink = document.getElementById('logout-link');
-if (logoutLink) {
-    logoutLink.addEventListener('click', () => {
-        localStorage.removeItem('isLoggedIn');
-        alert('Logged out successfully!');
-        window.location.href = 'home.html';
+    signupBtn.addEventListener('click', () => {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        if (users.some(u => u.username === username)) {
+            alert('Username already exists!');
+            return;
+        }
+
+        users.push({ username, password });
+        localStorage.setItem('users', JSON.stringify(users));
+        alert('Account created! You can now log in.');
     });
 }
 
+// ===============================
+// Logout Functionality
+// ===============================
+document.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "logout-link") {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('currentUser');
+        alert('Logged out successfully!');
+        window.location.href = 'index.html';
+    }
+});
+
+// ===============================
 // Display Blogs on Home
+// ===============================
 function displayBlogs() {
     if (blogsContainer) {
         blogsContainer.innerHTML = '';
@@ -45,26 +93,16 @@ function displayBlogs() {
                 const blogDiv = document.createElement('div');
                 blogDiv.classList.add('blog');
                 
-                // Blog HTML structure with spacing and colorful theme
                 blogDiv.innerHTML = `
                     <h3 style="color: #4CAF50; margin-bottom: 0.5rem;">${blog.title}</h3>
-                    <p style="
-                        line-height: 1.8; 
-                        font-size: calc(1rem + 0.5vw); 
-                        color: #333; 
-                        margin-bottom: 1rem;">
+                    <p style="line-height: 1.8; font-size: calc(1rem + 0.5vw); color: #333; margin-bottom: 1rem;">
                         ${blog.content}
                     </p>
-                    <small style="
-                        display: block; 
-                        text-align: right; 
-                        font-size: 0.9rem; 
-                        color: #888;">
+                    <small style="display: block; text-align: right; font-size: 0.9rem; color: #888;">
                         <strong>Published:</strong> ${blog.date}
                     </small>
                 `;
                 
-                // Apply colorful background for dark mode or bright theme
                 blogDiv.style.background = 'linear-gradient(135deg, #f9f9f9, #e6f7ff)';
                 blogDiv.style.border = '1px solid #ddd';
                 blogDiv.style.borderRadius = '10px';
@@ -77,8 +115,9 @@ function displayBlogs() {
     }
 }
 
-
+// ===============================
 // Manage Blogs in Editor
+// ===============================
 function manageBlogs() {
     if (editorContainer) {
         editorContainer.innerHTML = '';
@@ -88,9 +127,9 @@ function manageBlogs() {
             blogForm.innerHTML = `
                 <input type="text" value="${blog.title}" id="title-${index}" />
                 <textarea id="content-${index}">${blog.content}</textarea>
-                <button onclick="saveBlog(${index})">Save</button>
-                <button onclick="publishBlog(${index})">Publish</button>
-                <button onclick="deleteBlog(${index})">Delete</button>
+                <button class="save-btn" onclick="saveBlog(${index})">Save</button>
+                <button class="publish-btn" onclick="publishBlog(${index})">Publish</button>
+                <button class="delete-btn" onclick="deleteBlog(${index})">Delete</button>
             `;
             editorContainer.appendChild(blogForm);
         });
@@ -129,32 +168,56 @@ function deleteBlog(index) {
 if (addBlogBtn) {
     addBlogBtn.addEventListener('click', () => {
         blogs.push({ title: 'New Blog', content: 'Blog content here...', isPublished: false, date: '' });
+        localStorage.setItem('blogs', JSON.stringify(blogs));
         manageBlogs();
     });
 }
 
+// ===============================
 // Initial Page Load
+// ===============================
 if (blogsContainer) displayBlogs();
 if (editorContainer) manageBlogs();
 
-
-const darkModeToggle = document.getElementById('dark-mode-toggle');
-
-// Function to toggle dark mode
+// ===============================
+// Dark Mode
+// ===============================
 function toggleDarkMode() {
     document.body.classList.toggle('dark-mode');
     const isDarkMode = document.body.classList.contains('dark-mode');
     localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
-    darkModeToggle.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+    const btn = document.getElementById('dark-mode-toggle');
+    if (btn) btn.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
 }
 
-// Apply dark mode on page load if previously enabled
 if (localStorage.getItem('darkMode') === 'enabled') {
     document.body.classList.add('dark-mode');
-    if (darkModeToggle) darkModeToggle.textContent = 'Light Mode';
+    const btn = document.getElementById('dark-mode-toggle');
+    if (btn) btn.textContent = 'Light Mode';
 }
 
-// Add event listener to the toggle button
-if (darkModeToggle) {
-    darkModeToggle.addEventListener('click', toggleDarkMode);
+document.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "dark-mode-toggle") {
+        toggleDarkMode();
+    }
+});
+
+// ===============================
+// Interactive Messages
+// ===============================
+const blogSectionTitle = document.querySelector('#blog-section h2');
+if (blogSectionTitle) {
+    const user = localStorage.getItem('currentUser');
+    if (isLoggedIn && user) {
+        blogSectionTitle.textContent = `Welcome back, ${user}! 🎉 Here are your blogs`;
+    } else {
+        blogSectionTitle.textContent = 'Discover amazing stories below 👇';
+    }
+}
+
+if (welcomeBanner) {
+    const user = localStorage.getItem('currentUser');
+    if (isLoggedIn && user) {
+        welcomeBanner.textContent = `Welcome, ${user}! ✍️ Ready to write?`;
+    }
 }
